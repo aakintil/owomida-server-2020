@@ -28,8 +28,7 @@ app.get('/', async (req, res) => {
 		bankId // add the bank ID to url if i click on the bank ?filter='7 days'&bankId=823
 	} = req.query;
 	let query = {};
-	console.log('\n ==========================================')
-	console.log('&& inside index router / function for server && \n \n ')
+
 	// queries 
 	if (filter) {
 		switch (filter) {
@@ -120,10 +119,6 @@ app.get('/', async (req, res) => {
 		debitAmount = (dA + dC).toFixed(2); 
 	}
 
-	// console.log('earnings ', creditAmount); 
-	// console.log('payments ', debitAmount); 
-	// console.log('------------------------------------------ \n')
-
 	res.send({
 		transactions: {
 			payments: debitAmount,
@@ -132,12 +127,17 @@ app.get('/', async (req, res) => {
 	})
 })
 
-app.get('/:id', (req, res) => {
-	var db = req.db;
-	Transaction.findById(req.params.id, function (error, transaction) {
-	  if (error) { console.error(transaction); }
-	  res.send(transaction); 
-	})
+// app.get('/:id', (req, res) => {
+// 	console.log("yo checknig me \n")
+// 	var db = req.db;
+// 	Transaction.findById(req.params.id, function (error, transaction) {
+// 	  if (error) { console.error(transaction); }
+// 	  res.send(transaction); 
+// 	})
+// })
+
+app.get('/payments', (req, res) => {
+	console.log("in here "); 
 })
 
 // app.get('/posts', (req, res) => {
