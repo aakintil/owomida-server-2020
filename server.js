@@ -1,149 +1,171 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const cors = require('cors')
-const morgan = require('morgan')
-const moment = require('moment')
-const path = require('path')
-const serveStatic = require('serve-static')
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const morgan = require("morgan");
+const moment = require("moment");
+const path = require("path");
+const serveStatic = require("serve-static");
 
-const app = express()
-app.use(morgan('combined'))
-app.use(bodyParser.json())
-app.use(cors())
-// serve static files from whatever our root directory is 
-app.use(serveStatic(__dirname + '/dist'))
+const app = express();
+app.use(morgan("combined"));
+app.use(bodyParser.json());
+app.use(cors());
+// serve static files from whatever our root directory is
+app.use(serveStatic(__dirname + "/dist"));
 
-const mongodb_conn_module = require('./mongodbConnModule')
+const mongodb_conn_module = require("./mongodbConnModule");
 var db = mongodb_conn_module.connect();
 
-const Transaction = require('./transaction') // change to const and see what happens
-let oneMonthAgo = moment().subtract(1, 'month').startOf('day').toISOString()
-let sevenDaysAgo = moment().subtract(7, 'days').startOf('day').toISOString()
-let yesterdayDate = moment().subtract(1, 'days').startOf('day').toISOString();
-let todayDate = moment().startOf('day').toISOString();
+const Transaction = require("./transaction"); // change to const and see what happens
+let oneMonthAgo = moment().subtract(1, "month").startOf("day").toISOString();
+let sevenDaysAgo = moment().subtract(7, "days").startOf("day").toISOString();
+let yesterdayDate = moment().subtract(1, "days").startOf("day").toISOString();
+let todayDate = moment().startOf("day").toISOString();
 
-app.get('/', async (req, res) => {
-	const {
-		filter,
-		bankId // add the bank ID to url if i click on the bank ?filter='7 days'&bankId=823
-	} = req.query;
-	let query = {};
-	console.log("inside overview \n")
-	// queries 
-	if (filter) {
-		switch (filter) {
-			case 'today':
-				query = {
-					'date': {
-						"$gt": todayDate
-					}
-				}
-				break;
+app.get("/", async (req, res) => {
+  const {
+    filter,
+    bankId, // add the bank ID to url if i click on the bank ?filter='7 days'&bankId=823
+  } = req.query;
+  let query = {};
+  console.log("inside overview \n");
+  // get query and filter parameters
+  if (filter) {
+    switch (filter) {
+      case "today":
+        query = {
+          date: {
+            $gt: todayDate,
+          },
+        };
+        break;
 
-			case 'yesterday':
-				query = {
-					'date': {
-						"$gt": yesterdayDate
-					}
-				}
-				break;
+      case "yesterday":
+        query = {
+          date: {
+            $gt: yesterdayDate,
+          },
+        };
+        break;
 
-			case 'week':
-				query = {
-					'date': {
-						"$gt": sevenDaysAgo
-					}
-				}
-				break;
+      case "week":
+        query = {
+          date: {
+            $gt: sevenDaysAgo,
+          },
+        };
+        break;
 
-			case 'month':
-				query = {
-					'date': {
-						"$gt": oneMonthAgo
-					}
-				}
-				break;
+      case "month":
+        query = {
+          date: {
+            $gt: oneMonthAgo,
+          },
+        };
+        break;
 
-			case 'all':
-				query = {}
-				break;
-			default:
-				query = {
-					'date': {
-						"$gt": todayDate
-					}
-				}
-				break;
-		}
-	} else {
-		query = {
-			'date': {
-				"$gt": todayDate
-			}, 
-		}
-	}
-	if (bankId) {
-		query.account = bankId; 
-	}
-	query.type = 'credit'
-	let creditTrans = await Transaction.find(query, 
-		function (error, transactions) {
-			if (error) {
-				console.log(error);
-			}
-		})
-		
-	query.type = 'debit'
-	let debitTrans = await Transaction.find(query, 
-	function (error, transactions) {
-		if (error) {
-			console.log(error);
-		}
-	})
+      case "all":
+        query = {};
+        break;
+      default:
+        query = {
+          date: {
+            $gt: todayDate,
+          },
+        };
+        break;
+    }
+  } else {
+    query = {
+      date: {
+        $gt: todayDate,
+      },
+    };
+  }
+  if (bankId) {
+    query.account = bankId;
+  }
 
-	let creditAmount = 0; 
-	let debitAmount = 0; 
-	if (creditTrans.length > 0) { 
-		creditAmount = (creditTrans.reduce((previous, current) => {
-			return previous + current.amount;
-		}, 0)).toFixed(2)
-	}
+  // // get all transactions
+  // let allTransactions = await Transaction.find(query, function (
+  //   error,
+  //   transactions
+  // ) {
+  //   if (error) {
+  //     console.log(error);
+  //   }
+  // });
 
-	if (debitTrans.length > 0) {
-		let dA = debitTrans.reduce((previous, current) => {
-			return previous + current.amount;
-		}, 0); 
-		let dC = debitTrans.reduce((previous, current) => {
-			return previous + current.commission;
-		}, 0); 
-		debitAmount = (dA + dC).toFixed(2); 
-	}
+  // get credit transactions
+  query.type = "credit";
+  let creditTrans = await Transaction.find(query, function (
+    error,
+    transactions
+  ) {
+    if (error) {
+      console.log(error);
+    }
+  });
 
-	res.send({
-		transactions: {
-			payments: debitAmount,
-			earnings: creditAmount 
-		}
-	})
-})
+  // get debit transactions
+  query.type = "debit";
+  let debitTrans = await Transaction.find(query, function (
+    error,
+    transactions
+  ) {
+    if (error) {
+      console.log(error);
+    }
+  });
+
+  // calculate total credit and debit amounts
+  let creditAmount = 0;
+  let debitAmount = 0;
+  if (creditTrans.length > 0) {
+    creditAmount = creditTrans
+      .reduce((previous, current) => {
+        return previous + current.amount;
+      }, 0)
+      .toFixed(2);
+  }
+
+  if (debitTrans.length > 0) {
+    let dA = debitTrans.reduce((previous, current) => {
+      return previous + current.amount;
+    }, 0);
+    let dC = debitTrans.reduce((previous, current) => {
+      return previous + current.commission;
+    }, 0);
+    debitAmount = (dA + dC).toFixed(2);
+  }
+
+  res.send({
+    transactions: {
+      payments: debitAmount,
+      earnings: creditAmount,
+      paymentsTransactions: debitTrans,
+      earningsTransactions: creditTrans
+    },
+  });
+});
 
 // app.get('/:id', (req, res) => {
 // 	console.log("yo checknig me \n")
 // 	var db = req.db;
 // 	Transaction.findById(req.params.id, function (error, transaction) {
 // 	  if (error) { console.error(transaction); }
-// 	  res.send(transaction); 
+// 	  res.send(transaction);
 // 	})
 // })
 
-app.get('/payments', async (req, res) => {
-	const {
-		filter,
-		bankId // add the bank ID to url if i click on the bank ?filter='7 days'&bankId=823
-	} = req.query;
-	let query = {};
-	console.log("inside payments ", filter ," \n")
-})
+app.get("/payments", async (req, res) => {
+  const {
+    filter,
+    bankId, // add the bank ID to url if i click on the bank ?filter='7 days'&bankId=823
+  } = req.query;
+  let query = {};
+  console.log("inside payments ", filter, " \n");
+});
 
 // app.get('/posts', (req, res) => {
 //   Post.find({}, 'title description', function (error, posts) {
@@ -211,5 +233,7 @@ app.get('/payments', async (req, res) => {
 // 	  res.send(post)
 // 	})
 // })
-const port = process.env.PORT || 3000; 
-app.listen(port, () => { console.log('app.js server is live on port: ', port)})
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log("app.js server is live on port: ", port);
+});
