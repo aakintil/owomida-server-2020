@@ -158,14 +158,8 @@ app.get("/", async (req, res) => {
 // 	})
 // })
 
-app.get("/payments", async (req, res) => {
-  const {
-    filter,
-    bankId, // add the bank ID to url if i click on the bank ?filter='7 days'&bankId=823
-  } = req.query;
-  let query = {};
-  console.log("inside payments ", filter, " \n");
-});
+
+
 
 // app.get('/posts', (req, res) => {
 //   Post.find({}, 'title description', function (error, posts) {
